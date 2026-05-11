@@ -1,21 +1,14 @@
 flowchart LR
     %% =========================================================
     %% Azure Data Quality Agent Architecture
-    %% Public/API seed data + stored procedures generate source OLTP data.
+    %% Stored procedures generate source OLTP data.
     %% PostgreSQL and SQL Server OLTP sources replicate into PostgreSQL OLAP.
     %% Database logs and pipeline logs are centralized in Azure Monitor / Log Analytics.
     %% Root Cause Agent reads validation results and centralized logs to recommend fixes.
     %% =========================================================
 
-    %% External / Seed Data
-    subgraph EXT[External / Public Data Sources]
-        API1[Public API Dataset 1]
-        API2[Public API Dataset 2]
-    end
-
-    %% Ingestion and source-data generation
+    %% Source-data generation
     subgraph GEN[Source Data Generation Layer]
-        API_INGEST[API Ingestion Job\nAzure Function / Python / Azure Data Factory]
         PG_PROC[PostgreSQL Stored Procedures\nGenerate / mutate OLTP records]
         SQL_PROC[SQL Server Stored Procedures\nGenerate / mutate OLTP records]
     end
@@ -67,12 +60,6 @@ flowchart LR
         TEAMS[Teams Alert / Notification]
         TICKET[Ticket / Work Item Draft]
     end
-
-    %% Public API ingestion into source systems
-    API1 --> API_INGEST
-    API2 --> API_INGEST
-    API_INGEST --> PG_SRC
-    API_INGEST --> SQL_SRC
 
     %% Stored procedures generate new OLTP data
     PG_PROC --> PG_SRC
