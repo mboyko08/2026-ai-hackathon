@@ -16,11 +16,11 @@ The system includes:
 - CDC/change tables that capture inserts, updates, and deletes from each OLTP source
 - A CDC replication pipeline that loads changes into a PostgreSQL OLAP warehouse
 - A centralized Azure logging area for database logs and pipeline logs
-- Four agents:
-  - Front Door Agent
+- Three agents and one skill:
+  - Orchestrator Agent
   - Validation Agent
-  - Executor Agent
   - Root Cause Agent
+  - CDC Executor skill (invoked by the Validation Agent — runs read-only queries, not an autonomous agent)
 
 ## Scope for Two-Day Hackathon
 
@@ -241,7 +241,7 @@ Warehouse logs must also be forwarded to the central log area.
 
 ## Agent Design
 
-## 1. Front Door Agent
+## 1. Orchestrator Agent
 
 Receives the user request and starts the validation workflow.
 
@@ -274,9 +274,9 @@ Recommended checks:
 - Insert/update/delete operation count comparison
 - Null count comparison for important fields
 
-## 3. Executor Agent
+## 3. CDC Executor Skill
 
-Runs approved read-only checks.
+Runs approved read-only checks. This is a skill invoked by the Validation Agent, not an autonomous agent.
 
 Responsibilities:
 
@@ -284,14 +284,14 @@ Responsibilities:
 - Query SQL Server CDC data
 - Query PostgreSQL warehouse data
 - Query warehouse audit tables
-- Store validation results
-- Return structured results to the Root Cause Agent
+- Return structured results to the Validation Agent, which forwards them to the Root Cause Agent
 
 Rules:
 
-- Use read-only validation queries
+- Use read-only validation queries only
 - Do not modify source or warehouse records
 - Do not rerun stored procedures or pipelines automatically
+- Do not make autonomous decisions — execute the plan and return results
 
 ## 4. Root Cause Agent
 
@@ -337,9 +337,9 @@ The Root Cause Agent should determine whether the likely issue came from:
 3. Capture or simulate CDC changes in both OLTP systems.
 4. Run the CDC replication pipeline into the PostgreSQL warehouse.
 5. Intentionally introduce one mismatch, such as skipping a CDC batch or creating duplicate target keys.
-6. Ask the Front Door Agent to validate the latest CDC replication.
-7. Validation Agent selects checks.
-8. Executor Agent runs checks.
+6. Ask the Orchestrator Agent to validate the latest CDC replication.
+7. Validation Agent selects checks and invokes CDC Executor skill.
+8. CDC Executor skill runs read-only queries and returns structured results.
 9. Root Cause Agent reads centralized logs and explains what failed.
 10. Generate a validation report with the recommended fix.
 

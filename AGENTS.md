@@ -20,18 +20,18 @@ The system includes:
 - CDC replication pipeline from OLTP sources into the PostgreSQL warehouse
 - Centralized Azure log area for database logs and pipeline replication logs
 - Four simple agents:
-  - Front Door Agent
+  - Orchestrator Agent
   - Validation Agent
   - Executor Agent
   - Root Cause Agent
 
 ## Agent Responsibilities
 
-### Front Door Agent
+### Orchestrator Agent
 
 Receives the user request and starts the validation workflow.
 
-The Front Door Agent should:
+The Orchestrator Agent should:
 
 - Identify which source system and warehouse table need validation.
 - Confirm whether the validation should cover PostgreSQL CDC data, SQL Server CDC data, or both.

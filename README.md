@@ -59,7 +59,7 @@ flowchart LR
 
     %% Agent layer
     subgraph AGENTS[Data Quality Agent Layer]
-        FRONT[Front Door Agent<br/>Receives validation request]
+        FRONT[Orchestrator Agent<br/>Receives validation request]
         VALIDATE[Validation Agent<br/>Chooses validation checks]
         EXEC[Executor Agent<br/>Runs approved read-only SQL checks]
         ROOT[Root Cause Agent<br/>Reads validation failures + centralized logs<br/>Recommends what to fix]
@@ -127,7 +127,7 @@ flowchart LR
 - [Copilot instructions](.github/copilot-instructions.md)
 - [Shared CDC validation instructions](.github/instructions/cdc-validation.instructions.md)
 - [Agent role instructions](.github/instructions/agent-roles.instructions.md)
-- [Front Door Agent](.github/agents/front-door.agent.md)
+- [Orchestrator Agent](.github/agents/orchestrator.agent.md)
 - [Validation Agent](.github/agents/validation.agent.md)
 - [Executor Agent](.github/agents/executor.agent.md)
 - [Root Cause Agent](.github/agents/root-cause.agent.md)

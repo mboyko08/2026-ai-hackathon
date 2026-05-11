@@ -19,11 +19,11 @@ The system includes:
 - CDC/change data from both OLTP sources
 - CDC replication pipeline from OLTP sources into the PostgreSQL warehouse
 - Centralized Azure log area for database logs and pipeline replication logs
-- Four simple agents:
-  - Front Door Agent
+- Three agents and one skill:
+  - Orchestrator Agent
   - Validation Agent
-  - Executor Agent
   - Root Cause Agent
+  - CDC Executor skill (invoked by the Validation Agent — runs read-only queries, not an autonomous agent)
 
 ## Working Rules
 
