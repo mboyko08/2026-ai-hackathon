@@ -4,6 +4,8 @@ This repository contains a simple Azure-based CDC data quality validation system
 
 The system compares CDC data from PostgreSQL and SQL Server OLTP sources against replicated data in a PostgreSQL OLAP warehouse. Source data is generated only by stored procedures.
 
+The PostgreSQL and SQL Server OLTP generators are designed to be independent. The warehouse merge process stages CDC rows, deduplicates them, applies deletes, updates, and inserts in a controlled order, and forwards warehouse load logs to the central log area.
+
 ## Architecture
 
 ```mermaid

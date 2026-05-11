@@ -50,6 +50,16 @@ The system includes:
 
 Each OLTP source should generate data through stored procedures.
 
+The PostgreSQL and SQL Server generators should be fully independent. Each one owns its own sample data model, execution schedule, logging, and change sequence.
+
+Shared rules:
+
+- Do not call one source generator from the other.
+- Do not depend on shared runtime state across databases.
+- Keep the generated business keys stable enough for CDC and merge testing.
+- Emit a run identifier and batch identifier for every execution.
+- Write generator results to the source database log table and forward them to the central log area.
+
 ### PostgreSQL OLTP Stored Procedure
 
 Purpose:
@@ -65,6 +75,13 @@ Example procedure behavior:
 - Update 3 existing records
 - Mark 1 record as deleted
 - Record start time, end time, rows inserted, rows updated, rows deleted, and status
+
+Design notes:
+
+- Use PostgreSQL-native schema objects and sequences.
+- Keep the generator focused on PostgreSQL-specific row shapes and business rules.
+- Write a source-specific run record that includes the CDC batch identifier.
+- Forward the stored procedure log entry to the central log area after each run.
 
 ### SQL Server OLTP Stored Procedure
 
@@ -82,6 +99,13 @@ Example procedure behavior:
 - Mark 1 record as deleted
 - Record start time, end time, rows inserted, rows updated, rows deleted, and status
 
+Design notes:
+
+- Use SQL Server-specific tables, identity columns, and transaction patterns.
+- Keep the generator independent from the PostgreSQL generator.
+- Write a source-specific run record that includes the CDC batch identifier.
+- Forward the stored procedure log entry to the central log area after each run.
+
 ## CDC Data Design
 
 CDC data should represent changes from the OLTP source systems.
@@ -91,7 +115,7 @@ CDC data should represent changes from the OLTP source systems.
 Use a common CDC shape where possible:
 
 | Field | Purpose |
-|---|---|
+| --- | --- |
 | source_system | Identifies PostgreSQL or SQL Server source |
 | source_table | Source table name |
 | primary_key_value | Business or technical primary key |
@@ -112,15 +136,56 @@ The replication pipeline should:
 5. Merge changes into warehouse target tables.
 6. Write pipeline execution details to the centralized log area.
 
+## Warehouse Merge Process
+
+The warehouse merge process should be deterministic, idempotent, and auditable.
+
+Merge design:
+
+- Land raw CDC rows in staging first.
+- Deduplicate staging rows by source system, source table, primary key, and change sequence.
+- Apply inserts, updates, and deletes in a single controlled merge step.
+- Preserve the latest source change for each business key.
+- Treat deletes explicitly rather than inferring them from missing records.
+- Record row counts for inserted, updated, deleted, and rejected rows.
+- Write a warehouse merge audit row for each batch.
+
+Recommended merge order:
+
+1. Validate staging data shape and required columns.
+2. Deduplicate by source key and change sequence.
+3. Apply deletes.
+4. Apply updates.
+5. Apply inserts.
+6. Record final loaded counts in the warehouse audit tables.
+
+Warehouse merge logging:
+
+- Merge start time
+- Merge end time
+- Source system
+- Source table
+- Target table
+- CDC batch or checkpoint
+- Insert count
+- Update count
+- Delete count
+- Rejected count
+- Merge status
+- Error message, if any
+
 ## Centralized Logging
 
-Database logs and pipeline logs should be loaded into one centralized Azure logging area.
+All logs should be loaded into one centralized Azure logging area.
 
 Recommended target:
 
 - Azure Log Analytics Workspace
 - Azure Storage account log container
 - PostgreSQL warehouse audit tables, if a simpler implementation is needed
+- Warehouse merge audit tables
+- Warehouse data load logs
+- Warehouse validation result logs
 
 ### Database Logs
 
@@ -151,6 +216,28 @@ Pipeline logs should include:
 - End time
 - Status
 - Error message, if any
+
+### Warehouse Logs
+
+Warehouse logs should include:
+
+- Warehouse load run ID
+- Merge batch ID
+- Source system
+- Source table
+- Target table
+- Rows staged
+- Rows merged
+- Rows rejected
+- Rows inserted
+- Rows updated
+- Rows deleted
+- Start time
+- End time
+- Status
+- Error message, if any
+
+Warehouse logs must also be forwarded to the central log area.
 
 ## Agent Design
 
@@ -235,7 +322,7 @@ The Root Cause Agent should determine whether the likely issue came from:
 ## MVP Validation Checks
 
 | Check | Purpose |
-|---|---|
+| --- | --- |
 | CDC row count comparison | Confirms the warehouse loaded the same number of CDC changes from each source |
 | Missing key check | Finds source CDC keys that are missing from the warehouse |
 | Duplicate key check | Finds duplicate target records |
