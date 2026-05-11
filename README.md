@@ -122,7 +122,8 @@ flowchart LR
 
 ## Files
 
-- [Project plan](cdc_stored_proc_data_quality_project_plan.md)
+- [Project plan](docs/project-plan.md)
+- [Task files](docs/tasks/)
 - [Main architecture diagram](diagrams/azure_data_quality_agent_architecture.mmd)
 - [Copilot instructions](.github/copilot-instructions.md)
 - [Shared CDC validation instructions](.github/instructions/cdc-validation.instructions.md)
