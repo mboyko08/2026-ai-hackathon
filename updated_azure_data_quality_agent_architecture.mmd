@@ -1,0 +1,122 @@
+flowchart LR
+    %% =========================================================
+    %% Azure Data Quality Agent Architecture
+    %% Public/API seed data + stored procedures generate source OLTP data.
+    %% PostgreSQL and SQL Server OLTP sources replicate into PostgreSQL OLAP.
+    %% Database logs and pipeline logs are centralized in Azure Monitor / Log Analytics.
+    %% Root Cause Agent reads validation results and centralized logs to recommend fixes.
+    %% =========================================================
+
+    %% External / Seed Data
+    subgraph EXT[External / Public Data Sources]
+        API1[Public API Dataset 1]
+        API2[Public API Dataset 2]
+    end
+
+    %% Ingestion and source-data generation
+    subgraph GEN[Source Data Generation Layer]
+        API_INGEST[API Ingestion Job\nAzure Function / Python / Azure Data Factory]
+        PG_PROC[PostgreSQL Stored Procedures\nGenerate / mutate OLTP records]
+        SQL_PROC[SQL Server Stored Procedures\nGenerate / mutate OLTP records]
+    end
+
+    %% Source OLTP databases
+    subgraph OLTP[Azure Source / OLTP Layer]
+        PG_SRC[(Azure Database for PostgreSQL\nOLTP Source)]
+        SQL_SRC[(Azure SQL Database / SQL Server\nOLTP Source)]
+        PG_SRC_TABLES[PostgreSQL Source Tables\ntransactions / events / audit columns]
+        SQL_SRC_TABLES[SQL Server Source Tables\ntransactions / events / audit columns]
+        PG_DB_LOGS[PostgreSQL Database Logs]
+        SQL_DB_LOGS[SQL Server Database Logs]
+    end
+
+    %% Replication pipeline
+    subgraph REPL[OLTP to OLAP Replication Layer]
+        PG_REPL[PostgreSQL → PostgreSQL Warehouse\nReplication Pipeline]
+        SQL_REPL[SQL Server → PostgreSQL Warehouse\nReplication Pipeline]
+        PIPELINE_LOGS[Replication Pipeline Logs\nrun status / row counts / errors / duration]
+    end
+
+    %% Target warehouse
+    subgraph WAREHOUSE[Azure Target / OLAP Layer]
+        PG_DW[(Azure Database for PostgreSQL\nOLAP Data Warehouse Target)]
+        STAGING[Warehouse Staging Tables]
+        FACTS[Warehouse Fact Tables]
+        DIMS[Warehouse Dimension Tables]
+        LOAD_AUDIT[Warehouse Load Audit Tables]
+        VALIDATION_HISTORY[Validation History Tables]
+    end
+
+    %% Central log area
+    subgraph LOGS[Centralized Azure Logging Area]
+        LOG_ANALYTICS[(Azure Monitor / Log Analytics Workspace\nCentral log store)]
+        LOG_QUERIES[Saved Log Queries\nDB errors / pipeline failures / slow steps]
+    end
+
+    %% Agent layer
+    subgraph AGENTS[Data Quality Agent Layer]
+        FRONT[Front Door Agent\nReceives validation request]
+        VALIDATE[Validation Agent\nChooses validation checks]
+        EXEC[Executor Agent\nRuns approved read-only SQL checks]
+        ROOT[Root Cause Agent\nReads validation failures + centralized logs\nRecommends what to fix]
+    end
+
+    %% Outputs
+    subgraph OUTPUT[Outputs]
+        REPORT[Validation Report\nPass/fail + likely cause + recommended fix]
+        TEAMS[Teams Alert / Notification]
+        TICKET[Ticket / Work Item Draft]
+    end
+
+    %% Public API ingestion into source systems
+    API1 --> API_INGEST
+    API2 --> API_INGEST
+    API_INGEST --> PG_SRC
+    API_INGEST --> SQL_SRC
+
+    %% Stored procedures generate new OLTP data
+    PG_PROC --> PG_SRC
+    SQL_PROC --> SQL_SRC
+    PG_SRC --> PG_SRC_TABLES
+    SQL_SRC --> SQL_SRC_TABLES
+
+    %% Replication from OLTP to OLAP warehouse
+    PG_SRC_TABLES --> PG_REPL
+    SQL_SRC_TABLES --> SQL_REPL
+    PG_REPL --> STAGING
+    SQL_REPL --> STAGING
+    STAGING --> FACTS
+    STAGING --> DIMS
+    FACTS --> PG_DW
+    DIMS --> PG_DW
+    LOAD_AUDIT --> PG_DW
+    VALIDATION_HISTORY --> PG_DW
+
+    %% Logs centralized into Azure Monitor / Log Analytics
+    PG_SRC --> PG_DB_LOGS
+    SQL_SRC --> SQL_DB_LOGS
+    PG_REPL --> PIPELINE_LOGS
+    SQL_REPL --> PIPELINE_LOGS
+    PG_DB_LOGS --> LOG_ANALYTICS
+    SQL_DB_LOGS --> LOG_ANALYTICS
+    PIPELINE_LOGS --> LOG_ANALYTICS
+    LOG_ANALYTICS --> LOG_QUERIES
+
+    %% Agent workflow
+    FRONT --> VALIDATE
+    VALIDATE --> EXEC
+    EXEC --> PG_SRC_TABLES
+    EXEC --> SQL_SRC_TABLES
+    EXEC --> PG_DW
+    EXEC --> VALIDATION_HISTORY
+    EXEC --> ROOT
+
+    %% Root cause agent uses centralized logs and validation results
+    LOG_ANALYTICS --> ROOT
+    LOG_QUERIES --> ROOT
+    VALIDATION_HISTORY --> ROOT
+
+    %% Outputs
+    ROOT --> REPORT
+    REPORT --> TEAMS
+    REPORT --> TICKET
