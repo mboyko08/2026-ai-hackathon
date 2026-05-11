@@ -49,6 +49,11 @@ az postgres flexible-server parameter set \
   --value logical \
   --output none
 
+echo "==> Restarting server to apply wal_level=logical"
+az postgres flexible-server restart \
+  --resource-group "$RESOURCE_GROUP" \
+  --name "$SERVER_NAME"
+
 echo ""
 echo "Done."
 echo "  Server:   $SERVER_NAME.postgres.database.azure.com"
@@ -60,15 +65,15 @@ echo "  postgresql://$ADMIN_USER:<password>@$SERVER_NAME.postgres.database.azure
 echo ""
 
 # ------------------------------------------------------------
-# Apply schema (tables + stored procedure)
+# Apply schema files in order
 # ------------------------------------------------------------
-SCHEMA_FILE="$(dirname "$0")/schema/01-postgresql-oltp-schema.sql"
-if [[ -f "$SCHEMA_FILE" ]]; then
-  echo "==> Applying schema from $SCHEMA_FILE"
-  PGPASSWORD="$ADMIN_PASSWORD" psql \
-    "postgresql://$ADMIN_USER@$SERVER_NAME.postgres.database.azure.com/$DB_NAME?sslmode=require" \
-    -f "$SCHEMA_FILE"
-  echo "==> Schema applied successfully"
-else
-  echo "WARNING: Schema file not found at $SCHEMA_FILE — skipping"
-fi
+SCHEMA_DIR="$(dirname "$0")/schema"
+PG_CONN="postgresql://$ADMIN_USER@$SERVER_NAME.postgres.database.azure.com/$DB_NAME?sslmode=require"
+
+for SCHEMA_FILE in "$SCHEMA_DIR"/pg-[0-9][0-9]-*.sql; do
+  if [[ -f "$SCHEMA_FILE" ]]; then
+    echo "==> Applying schema file: $(basename "$SCHEMA_FILE")"
+    PGPASSWORD="$ADMIN_PASSWORD" psql "$PG_CONN" -f "$SCHEMA_FILE"
+  fi
+done
+echo "==> All schema files applied"
