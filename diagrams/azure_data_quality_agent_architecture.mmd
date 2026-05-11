@@ -9,30 +9,30 @@ flowchart LR
 
     %% Source-data generation
     subgraph GEN[Source Data Generation Layer]
-        PG_PROC[PostgreSQL Stored Procedures\nGenerate / mutate OLTP records]
-        SQL_PROC[SQL Server Stored Procedures\nGenerate / mutate OLTP records]
+        PG_PROC[PostgreSQL Stored Procedures<br/>Generate / mutate OLTP records]
+        SQL_PROC[SQL Server Stored Procedures<br/>Generate / mutate OLTP records]
     end
 
     %% Source OLTP databases
     subgraph OLTP[Azure Source / OLTP Layer]
-        PG_SRC[(Azure Database for PostgreSQL\nOLTP Source)]
-        SQL_SRC[(Azure SQL Database / SQL Server\nOLTP Source)]
-        PG_SRC_TABLES[PostgreSQL Source Tables\ntransactions / events / audit columns]
-        SQL_SRC_TABLES[SQL Server Source Tables\ntransactions / events / audit columns]
+        PG_SRC[(Azure Database for PostgreSQL<br/>OLTP Source)]
+        SQL_SRC[(Azure SQL Database / SQL Server<br/>OLTP Source)]
+        PG_SRC_TABLES[PostgreSQL Source Tables<br/>transactions / events / audit columns]
+        SQL_SRC_TABLES[SQL Server Source Tables<br/>transactions / events / audit columns]
         PG_DB_LOGS[PostgreSQL Database Logs]
         SQL_DB_LOGS[SQL Server Database Logs]
     end
 
     %% Replication pipeline
     subgraph REPL[OLTP to OLAP Replication Layer]
-        PG_REPL[PostgreSQL → PostgreSQL Warehouse\nReplication Pipeline]
-        SQL_REPL[SQL Server → PostgreSQL Warehouse\nReplication Pipeline]
-        PIPELINE_LOGS[Replication Pipeline Logs\nrun status / row counts / errors / duration]
+        PG_REPL[PostgreSQL → PostgreSQL Warehouse<br/>Replication Pipeline]
+        SQL_REPL[SQL Server → PostgreSQL Warehouse<br/>Replication Pipeline]
+        PIPELINE_LOGS[Replication Pipeline Logs<br/>run status / row counts / errors / duration]
     end
 
     %% Target warehouse
     subgraph WAREHOUSE[Azure Target / OLAP Layer]
-        PG_DW[(Azure Database for PostgreSQL\nOLAP Data Warehouse Target)]
+        PG_DW[(Azure Database for PostgreSQL<br/>OLAP Data Warehouse Target)]
         STAGING[Warehouse Staging Tables]
         FACTS[Warehouse Fact Tables]
         DIMS[Warehouse Dimension Tables]
@@ -42,21 +42,21 @@ flowchart LR
 
     %% Central log area
     subgraph LOGS[Centralized Azure Logging Area]
-        LOG_ANALYTICS[(Azure Monitor / Log Analytics Workspace\nCentral log store)]
-        LOG_QUERIES[Saved Log Queries\nDB errors / pipeline failures / slow steps]
+        LOG_ANALYTICS[(Azure Monitor / Log Analytics Workspace<br/>Central log store)]
+        LOG_QUERIES[Saved Log Queries<br/>DB errors / pipeline failures / slow steps]
     end
 
     %% Agent layer
     subgraph AGENTS[Data Quality Agent Layer]
-        FRONT[Front Door Agent\nReceives validation request]
-        VALIDATE[Validation Agent\nChooses validation checks]
-        EXEC[Executor Agent\nRuns approved read-only SQL checks]
-        ROOT[Root Cause Agent\nReads validation failures + centralized logs\nRecommends what to fix]
+        FRONT[Front Door Agent<br/>Receives validation request]
+        VALIDATE[Validation Agent<br/>Chooses validation checks]
+        EXEC[Executor Agent<br/>Runs approved read-only SQL checks]
+        ROOT[Root Cause Agent<br/>Reads validation failures + centralized logs<br/>Recommends what to fix]
     end
 
     %% Outputs
     subgraph OUTPUT[Outputs]
-        REPORT[Validation Report\nPass/fail + likely cause + recommended fix]
+        REPORT[Validation Report<br/>Pass/fail + likely cause + recommended fix]
         TEAMS[Teams Alert / Notification]
         TICKET[Ticket / Work Item Draft]
     end
